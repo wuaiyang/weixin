@@ -2,6 +2,7 @@
 
 var path = require('path');
 var wechat_file = path.join(__dirname, './config/wechat.txt');
+var wechat_ticket_file =  path.join(__dirname, './config/ticket.txt');
 var utill = require('./libs/utill');
 
 var config = {
@@ -27,6 +28,13 @@ var config = {
         saveAccessToken: function (data) {
             data = JSON.stringify(data);
             return utill.writeFileSync(wechat_file, data);
+        },
+        getTicket: function () {
+            return utill.readFileSync(wechat_ticket_file);
+        },
+        saveTicket: function (data) {
+            data = JSON.stringify(data);
+            return utill.writeFileSync(wechat_ticket_file, data);
         }
     }
 };

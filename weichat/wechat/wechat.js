@@ -54,6 +54,9 @@ var api = {
     },
     shortUrl:{
         create: prefix + 'shorturl?'
+    },
+    ticket:{
+        get: prefix +'ticket/getticket?'
     }
 };
 
@@ -64,6 +67,8 @@ function Wechat(opts) {
     this.appSecret = opts.appSecret;
     this.getAccessToken = opts.getAccessToken;
     this.saveAccessToken = opts.saveAccessToken;
+    this.getTicket = opts.getTicket;
+    this.saveTicket = opts.saveTicket;
 
     this.fetchAccessToken()
 }
@@ -75,6 +80,22 @@ Wechat.prototype.isValidAccessToken = function (data) {
 
     var expires_in = data.expires_in;
     var now = (new Date().getTime());
+
+    if (now < expires_in) {
+        return true;
+    } else {
+        return false;
+    }
+};
+
+Wechat.prototype.isValidTicket = function (data) {
+    if (!data || !data.ticket || !data.expires_in) {
+        return false;
+    }
+
+    var expires_in = data.expires_in;
+    var now = (new Date().getTime());
+
 
     if (now < expires_in) {
         return true;
@@ -99,16 +120,26 @@ Wechat.prototype.updateAccessToken = function () {
         })
     })
 };
+
+Wechat.prototype.updateTicket = function (access_token) {
+
+    var url = api.ticket.get + 'access_token=' + access_token + '&type=jsapi';
+
+    return new Promise(function (resolve, reject) {
+        request({url: url, json: true}).then(function (response) {
+            var data = response.body;
+            var now = (new Date().getTime());
+            var expires_in = now + (data.expires_in - 20) * 1000;
+            data.expires_in = expires_in;
+            resolve(data);
+        })
+    })
+};
+
 Wechat.prototype.fetchAccessToken = function () {
     var that = this;
 
-    if (this.access_token && this.expires_in) {
-        if (this.isValidAccessToken(this)) {
-            return Promise.resolve(this)
-        }
-    }
-
-    this.getAccessToken()
+    return this.getAccessToken()
         .then(function (data) {
 
             try {
@@ -127,10 +158,36 @@ Wechat.prototype.fetchAccessToken = function () {
         })
         .then(function (data) {
 
-            that.access_token = data.access_token;
-            that.expires_in = data.expires_in;
-
             that.saveAccessToken(data);
+
+            return Promise.resolve(data);
+        })
+};
+
+
+Wechat.prototype.fetchTicket = function (access_token) {
+    var that = this;
+
+    return this.getTicket()
+        .then(function (data) {
+
+            try {
+                data = JSON.parse(data)
+            }
+            catch (e) {
+                return that.updateTicket(access_token)
+            }
+
+            if (that.isValidTicket(data)) {
+
+                return Promise.resolve(data)
+            } else {
+                return that.updateTicket(access_token)
+            }
+        })
+        .then(function (data) {
+
+            that.saveTicket(data);
 
             return Promise.resolve(data);
         })
@@ -176,8 +233,6 @@ Wechat.prototype.uploadMaterial = function (type, material, permanent) {
                 } else {
                     options.formData = form
                 }
-
-                console.log(options);
 
                 request(options).then(function (response) {
                     var _data = response.body;
@@ -896,6 +951,7 @@ Wechat.prototype.semantic = function (msg) {
             });
     })
 };
+
 
 Wechat.prototype.reply = function () {
     var content = this.body;

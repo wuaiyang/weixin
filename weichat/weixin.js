@@ -190,7 +190,7 @@ exports.reply = function* (next) {
                 city:'西安',
                 category: 'movie',
                 uid:message.FromUserName
-            }
+            };
 
             var msgData = yield wechatApi.semantic(semontic);
             console.log(msgData);
